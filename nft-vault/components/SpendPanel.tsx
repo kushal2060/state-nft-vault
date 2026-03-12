@@ -2,76 +2,89 @@
 import { useState } from "react";
 import { MultisigDatum } from "@/lib/types";
 
-type Step = "form" | "sign" | "submit";
+type Step = "form" | "signing" | "submit";
+
+const WALLET_LABELS: Record<string, string> = {
+  eternl: "Eternl", nami: "Nami", lace: "Lace", typhon: "Typhon",
+  vespr: "Vespr", flint: "Flint", yoroi: "Yoroi", nufi: "NuFi", gerowallet: "GeroWallet",
+};
 
 interface Props {
   datum: MultisigDatum;
   vaultBalance: bigint;
   isAuthorizedSigner: boolean;
+  availableWallets: string[];
   onBuild: (recipient: string, amount: bigint) => Promise<string | null>;
   onSign: (txCbor: string) => Promise<string | null>;
+  onSwitchWallet: (walletName: string) => Promise<void>;
   onSubmit: (txCbor: string) => Promise<void>;
   loading: boolean;
 }
 
 export default function SpendPanel({
   datum, vaultBalance, isAuthorizedSigner,
-  onBuild, onSign, onSubmit, loading,
+  availableWallets, onBuild, onSign, onSwitchWallet, onSubmit, loading,
 }: Props) {
   const [step, setStep] = useState<Step>("form");
   const [recipient, setRecipient] = useState("");
   const [adaAmount, setAdaAmount] = useState("");
   const [txCbor, setTxCbor] = useState("");
-  const [pastedCbor, setPastedCbor] = useState("");
+  const [signaturesCollected, setSignaturesCollected] = useState(0);
+  const [waitingForSwitch, setWaitingForSwitch] = useState(false);
+  const [switchingWallet, setSwitchingWallet] = useState(false);
 
   const amountLovelace = BigInt(Math.floor(parseFloat(adaAmount || "0") * 1_000_000));
-  const amountValid = amountLovelace > 0n && amountLovelace <= vaultBalance;
+  const amountValid = amountLovelace > 0 && amountLovelace <= vaultBalance;
 
-  // Step 1: Build the tx (first signer)
+  const reset = () => {
+    setStep("form"); setTxCbor(""); setSignaturesCollected(0); setWaitingForSwitch(false);
+  };
+
   const handleBuild = async () => {
     const cbor = await onBuild(recipient, amountLovelace);
     if (cbor) {
       setTxCbor(cbor);
-      setStep("sign");
+      setSignaturesCollected(0);
+      setWaitingForSwitch(false);
+      setStep("signing");
     }
   };
 
-  // Step 2: Sign (current wallet signs the tx CBOR)
   const handleSign = async () => {
-    const source = pastedCbor || txCbor;
-    const signed = await onSign(source);
+    const signed = await onSign(txCbor);
     if (signed) {
       setTxCbor(signed);
-      setPastedCbor("");
+      const newCount = signaturesCollected + 1;
+      setSignaturesCollected(newCount);
+      if (newCount >= datum.threshold) {
+        setStep("submit");
+      } else {
+        setWaitingForSwitch(true);
+      }
     }
   };
 
-  // Step 3: Submit the fully signed tx
+  const handleSwitchWallet = async (walletName: string) => {
+    setSwitchingWallet(true);
+    try {
+      await onSwitchWallet(walletName);
+      setWaitingForSwitch(false);
+    } finally {
+      setSwitchingWallet(false);
+    }
+  };
+
   const handleSubmit = async () => {
-    const source = pastedCbor || txCbor;
-    await onSubmit(source);
-    // Reset
-    setStep("form");
-    setTxCbor("");
-    setPastedCbor("");
+    await onSubmit(txCbor);
+    reset();
     setRecipient("");
     setAdaAmount("");
   };
 
-  const copyToClipboard = () => navigator.clipboard.writeText(txCbor);
-
-  // ── Not a signer ──────────────────────────────────────────────────────
   if (!isAuthorizedSigner && step === "form") {
     return (
       <div className="text-center py-4">
         <p className="text-gray-600 text-sm">Your wallet is not an authorized signer.</p>
-        {/* Allow pasting a tx to sign / submit as coordinator */}
-        <button
-          onClick={() => setStep("sign")}
-          className="mt-3 text-xs text-blue-500 underline hover:text-blue-400"
-        >
-          Paste a tx to co-sign or submit
-        </button>
       </div>
     );
   }
@@ -79,26 +92,23 @@ export default function SpendPanel({
   return (
     <div className="space-y-4">
 
-      {/* ── Step Indicator ──────────────────────────────── */}
+      {/* Progress indicator */}
       <div className="flex gap-2">
-        {(["form", "sign", "submit"] as Step[]).map((s, i) => (
-          <div
-            key={s}
-            className={`flex items-center gap-1.5 text-xs ${
-              step === s ? "text-white" : "text-gray-600"
-            }`}
-          >
+        {(["form", "signing", "submit"] as Step[]).map((s, i) => (
+          <div key={s} className={`flex items-center gap-1.5 text-xs ${step === s ? "text-white" : "text-gray-600"}`}>
             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold
               ${step === s ? "bg-blue-600" : "bg-gray-700"}`}>
               {i + 1}
             </span>
-            <span className="capitalize hidden sm:inline">{s === "form" ? "Build" : s}</span>
+            <span className="capitalize hidden sm:inline">
+              {s === "form" ? "Build" : s === "signing" ? "Sign" : "Submit"}
+            </span>
             {i < 2 && <span className="text-gray-700 ml-1">›</span>}
           </div>
         ))}
       </div>
 
-      {/* ── Step 1: Build ───────────────────────────────── */}
+      {/* ── Step 1: Build ── */}
       {step === "form" && (
         <div className="space-y-3">
           <input
@@ -120,14 +130,11 @@ export default function SpendPanel({
                          text-white text-sm placeholder-gray-600 focus:border-blue-500 
                          focus:outline-none transition-colors pr-14"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
-              ADA
-            </span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">ADA</span>
           </div>
           {adaAmount && !amountValid && (
             <p className="text-red-400 text-xs">
-              Amount exceeds vault balance (
-              {(Number(vaultBalance) / 1_000_000).toFixed(2)} ADA)
+              Amount exceeds vault balance ({(Number(vaultBalance) / 1_000_000).toFixed(2)} ADA)
             </p>
           )}
           <button
@@ -141,104 +148,90 @@ export default function SpendPanel({
         </div>
       )}
 
-      {/* ── Step 2: Sign & Share ─────────────────────────── */}
-      {step === "sign" && (
-        <div className="space-y-3">
-          <p className="text-gray-400 text-xs">
-            This transaction requires <strong className="text-white">{datum.threshold}</strong> of{" "}
-            <strong className="text-white">{datum.signers.length}</strong> signers.
-            Sign with your wallet, then share the CBOR with co-signers.
-          </p>
+      {/* ── Step 2: Sign (sequential) ── */}
+      {step === "signing" && (
+        <div className="space-y-4">
 
-          {/* Current CBOR output */}
-          {txCbor && (
-            <div className="bg-gray-800 rounded-xl p-3 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500">Transaction CBOR</span>
-                <button
-                  onClick={copyToClipboard}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          {/* Signatures progress dots */}
+          <div className="bg-gray-800 rounded-xl p-3 flex items-center justify-between">
+            <span className="text-xs text-gray-400">Signatures collected</span>
+            <div className="flex gap-1.5">
+              {Array.from({ length: datum.threshold }).map((_, i) => (
+                <span
+                  key={i}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
+                    ${i < signaturesCollected ? "bg-green-600 text-white" : "bg-gray-700 text-gray-500"}`}
                 >
-                  Copy
-                </button>
-              </div>
-              <p className="font-mono text-xs text-green-400 break-all line-clamp-3">
-                {txCbor}
+                  {i < signaturesCollected ? "✓" : i + 1}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {!waitingForSwitch ? (
+            /* Sign with currently connected wallet */
+            <div className="space-y-3">
+              <p className="text-gray-400 text-xs">
+                Sign as <strong className="text-white">Signer {signaturesCollected + 1}</strong> of{" "}
+                {datum.threshold} using your currently connected wallet.
               </p>
+              <button
+                onClick={handleSign}
+                disabled={loading}
+                className="w-full py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white font-semibold 
+                           rounded-xl transition-all disabled:opacity-40"
+              >
+                {loading ? "Signing…" : `✍ Sign (${signaturesCollected + 1} of ${datum.threshold})`}
+              </button>
+            </div>
+          ) : (
+            /* Wallet picker for next signer */
+            <div className="space-y-3">
+              <p className="text-gray-400 text-xs">
+                <span className="text-green-400 font-semibold">✓ Signature {signaturesCollected} collected.</span>{" "}
+                Now connect the next signer's wallet to continue.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {availableWallets.map((w) => (
+                  <button
+                    key={w}
+                    onClick={() => handleSwitchWallet(w)}
+                    disabled={switchingWallet}
+                    className="py-2 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 
+                               hover:border-blue-500 rounded-xl text-sm text-white transition-all 
+                               disabled:opacity-40"
+                  >
+                    {switchingWallet ? "Connecting…" : (WALLET_LABELS[w] ?? w)}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Paste field for co-signers */}
-          <textarea
-            value={pastedCbor}
-            onChange={(e) => setPastedCbor(e.target.value)}
-            placeholder="Paste CBOR from another signer here (optional)…"
-            rows={3}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl 
-                       text-white text-xs font-mono placeholder-gray-600 focus:border-blue-500 
-                       focus:outline-none transition-colors resize-none"
-          />
-
-          <div className="flex gap-2">
-            {/* Sign button */}
-            <button
-              onClick={handleSign}
-              disabled={loading || (!txCbor && !pastedCbor)}
-              className="flex-1 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white font-semibold 
-                         rounded-xl transition-all disabled:opacity-40"
-            >
-              {loading ? "Signing…" : "✍ Sign"}
-            </button>
-            {/* Proceed to submit */}
-            <button
-              onClick={() => setStep("submit")}
-              disabled={!txCbor && !pastedCbor}
-              className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-white font-semibold 
-                         rounded-xl transition-all disabled:opacity-40"
-            >
-              Ready to Submit →
-            </button>
-          </div>
-
-          <button
-            onClick={() => { setStep("form"); setTxCbor(""); }}
-            className="w-full text-xs text-gray-600 hover:text-gray-400 transition-colors"
-          >
+          <button onClick={reset} className="w-full text-xs text-gray-600 hover:text-gray-400 transition-colors">
             ← Start over
           </button>
         </div>
       )}
 
-      {/* ── Step 3: Submit ───────────────────────────────── */}
+      {/* ── Step 3: Submit ── */}
       {step === "submit" && (
         <div className="space-y-3">
-          <p className="text-gray-400 text-xs">
-            Paste the final CBOR (with all {datum.threshold} signatures) and submit to the chain.
-          </p>
-
-          <textarea
-            value={pastedCbor || txCbor}
-            onChange={(e) => setPastedCbor(e.target.value)}
-            placeholder="Final signed tx CBOR…"
-            rows={4}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl 
-                       text-white text-xs font-mono placeholder-gray-600 focus:border-blue-500 
-                       focus:outline-none transition-colors resize-none"
-          />
-
+          <div className="bg-green-900/20 border border-green-700/40 rounded-xl p-3 flex items-center gap-2">
+            <span className="text-green-400">✓</span>
+            <p className="text-green-400 text-xs">
+              All {datum.threshold} signatures collected. Ready to submit.
+            </p>
+          </div>
           <button
             onClick={handleSubmit}
-            disabled={loading || (!txCbor && !pastedCbor)}
+            disabled={loading}
             className="w-full py-2.5 bg-green-600 hover:bg-green-500 text-white font-bold 
                        rounded-xl transition-all disabled:opacity-40"
           >
             {loading ? "Submitting…" : "⚡ Submit Transaction"}
           </button>
-
-          <button
-            onClick={() => setStep("sign")}
-            className="w-full text-xs text-gray-600 hover:text-gray-400 transition-colors"
-          >
+          <button onClick={() => setStep("signing")} className="w-full text-xs text-gray-600 hover:text-gray-400 transition-colors">
             ← Back to signing
           </button>
         </div>

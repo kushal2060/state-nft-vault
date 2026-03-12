@@ -9,7 +9,7 @@ import {
 import {
   getMultisigStateValidator,
   getVaultValidator,
-  NFT_ASSET_NAME,
+  NFT_ASSET_NAME_STRING,
 } from "./contract";
 import { decodeMultisigDatum, encodeVaultRedeemer } from "./datum";
 import { MultisigDatum, VaultState } from "./types";
@@ -20,10 +20,10 @@ export async function fetchVaultState(
     params: {nftPolicyId: string; network: "Preprod"}
 ): Promise<VaultState> {
     const {nftPolicyId, network} =params;
-    const nftUnit = toUnit(nftPolicyId, fromText(NFT_ASSET_NAME));
+    const nftUnit = toUnit(nftPolicyId, fromText(NFT_ASSET_NAME_STRING));
 
-    const stateValidator =getMultisigStateValidator(nftPolicyId);
-    const VaultValidator = getVaultValidator(nftPolicyId);
+    const stateValidator =getMultisigStateValidator(nftPolicyId,NFT_ASSET_NAME_STRING);
+    const VaultValidator = getVaultValidator(nftPolicyId,NFT_ASSET_NAME_STRING);
     const stateAddress= validatorToAddress(network,stateValidator);
     const vaultAddress = validatorToAddress(network,VaultValidator);
 

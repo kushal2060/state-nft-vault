@@ -1,11 +1,11 @@
-import { Data, Constr, fromHex, toHex } from "@lucid-evolution/lucid";
+import { Data, Constr } from "@lucid-evolution/lucid";
 import { MultisigDatum } from "./types";
 
 // Encode MultisigDatum → on-chain Plutus data
 export function encodeMultisigDatum(datum: MultisigDatum): string {
   return Data.to(
     new Constr(0, [
-      datum.signers.map((s) => fromHex(s) as any),
+      datum.signers,
       BigInt(datum.threshold),
     ])
   );
@@ -16,7 +16,7 @@ export function decodeMultisigDatum(raw: string): MultisigDatum {
   const data = Data.from(raw) as Constr<Data>;
   const [signers, threshold] = data.fields;
   return {
-    signers: (signers as any).map(toHex),
+     signers: (signers as any[]) as string[],
     threshold: Number(threshold),
   };
 }
@@ -24,7 +24,7 @@ export function decodeMultisigDatum(raw: string): MultisigDatum {
 // VaultRedeemer: list of signing PKHs
 export function encodeVaultRedeemer(signatures: string[]): string {
   return Data.to(
-    new Constr(0, [signatures.map((s) => fromHex(s) as any)])
+    new Constr(0, [signatures])
   );
 }
 
@@ -35,7 +35,7 @@ export function encodeUpdateConfig(
 ): string {
   return Data.to(
     new Constr(0, [
-      newSigners.map((s) => fromHex(s) as any),
+      newSigners,
       BigInt(newThreshold),
     ])
   );

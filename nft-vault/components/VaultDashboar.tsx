@@ -1,13 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useLucid } from "@/hooks/useLucid";
-import {
-  fetchVaultState,
-  depositToVault,
-  buildSpendTx,
-  signTxCbor,
-  submitSignedTx,
-} from "@/lib/vaultActions";
+import { fetchVaultState } from "@/lib/vaultAction";
+import { depositToVault, buildSpendTx, signTxCbor, submitSignedTx } from "@/lib/setupAction";
 import { VaultState } from "@/lib/types";
 import SignerStatus from "./SignerStatus";
 import SpendPanel from "./SpendPanel";
@@ -15,19 +9,32 @@ import DepositForm from "./DepositForm";
 
 const NETWORK = "Preprod" as const;
 
-export default function VaultDashboard({ nftPolicyId }: { nftPolicyId: string }) {
-  const { lucid, walletAddress, walletPkh } = useLucid();
+interface Props {
+  nftPolicyId: string;
+  lucid: any;
+  walletAddress: string | null;
+  walletPkh: string | null;
+  availableWallets: string[];
+  onSwitchWallet: (walletName: string) => Promise<void>;
+}
+
+export default function VaultDashboard({ nftPolicyId, lucid, walletAddress, walletPkh, availableWallets, onSwitchWallet }: Props) {
   const [state, setState] = useState<VaultState | null>(null);
   const [loading, setLoading] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    console.log("refresh called, lucid:", !!lucid, "nftPolicyId:", nftPolicyId);
     if (!lucid) return;
     try {
       const fresh = await fetchVaultState(lucid, { nftPolicyId, network: NETWORK });
+      console.log("fetchVaultState result:", fresh);
+      console.log("stateUtxo:", fresh.stateUtxo);
+      console.log("stateUtxos count:", fresh.vaultUtxos.length);
       setState(fresh);
     } catch (e: any) {
+      console.error("fetchVaultState error:", e);
       setError(e.message);
     }
   }, [lucid, nftPolicyId]);
@@ -54,7 +61,7 @@ export default function VaultDashboard({ nftPolicyId }: { nftPolicyId: string })
   };
 
   const handleBuildSpend = async (recipient: string, amount: bigint) => {
-    if (!lucid || !state?.stateUtxo || !state.datum) return null;
+    if (!lucid || !state?.stateUtxo || !state.datum || !walletPkh) return null;
     setLoading(true);
     setError(null);
     try {
@@ -66,6 +73,7 @@ export default function VaultDashboard({ nftPolicyId }: { nftPolicyId: string })
         recipient,
         amount,
         network: NETWORK,
+        signingPkhs: state.datum.signers,  
       });
       return cbor;
     } catch (e: any) {
@@ -192,8 +200,10 @@ export default function VaultDashboard({ nftPolicyId }: { nftPolicyId: string })
                   datum={state.datum}
                   vaultBalance={state.vaultBalance}
                   isAuthorizedSigner={isAuthorizedSigner}
+                  availableWallets={availableWallets}
                   onBuild={handleBuildSpend}
                   onSign={handleSign}
+                  onSwitchWallet={onSwitchWallet}
                   onSubmit={handleSubmit}
                   loading={loading}
                 />
@@ -216,13 +226,13 @@ export default function VaultDashboard({ nftPolicyId }: { nftPolicyId: string })
           <div className="bg-green-900/20 border border-green-700/40 rounded-xl p-4">
             <p className="text-green-400 text-sm mb-1">✓ Transaction Submitted</p>
             
-              href={`https://preprod.cardanoscan.io/transaction/${txHash}`}
+              <a href={`https://preprod.cardanoscan.io/transaction/${txHash}`}  
               target="_blank"
               rel="noreferrer"
-              className="font-mono text-xs text-green-500 hover:text-green-300 underline break-all"
-            >
-              {txHash}
-            </a>
+              className="font-mono text-xs text-green-500 hover:text-green-300 underline break-all">Click to see in cardanoscan</a>
+            
+        
+              Tx hash is : {txHash}
           </div>
         )}
       </div>

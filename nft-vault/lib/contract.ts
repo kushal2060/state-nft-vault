@@ -1,48 +1,46 @@
-import {
-  applyParamsToScript,
-  MintingPolicy,
-  SpendingValidator,
-  fromText,
-  fromHex,
-} from "@lucid-evolution/lucid";
-import { Constr } from "@lucid-evolution/lucid";
-import blueprint from "../../plutus.json";
+import { applyParamsToScript, Constr, fromHex, MintingPolicy, SpendingValidator , OutRef, toHex } from "@lucid-evolution/lucid";
+import { fromText } from "@lucid-evolution/lucid";
 
-export const NFT_ASSET_NAME = "VaultStateNFT";
+import blueprint from "../plutus.json"
 
-function findValidator(title: string) {
-  const v = blueprint.validators.find((v: any) => v.title === title);
-  if (!v) throw new Error(`Validator ${title} not found in plutus.json`);
-  return v.compiledCode;
+export const NFT_ASSET_NAME_STRING = "VaultStateNFT";
+export const NFT_ASSET_NAME = fromText(NFT_ASSET_NAME_STRING);
+
+
+export function getNftPolicy(utxoRef: {txHash: string; outputIndex: number}):MintingPolicy{
+    const {txHash, outputIndex} = utxoRef;
+    
+    const appliedScript = applyParamsToScript(
+        blueprint.validators.find((v:any) => v.title === "nft_policy.nft_policy.mint")!.compiledCode,
+        [
+            new Constr(0, [txHash, BigInt(outputIndex)]),
+        ]
+    );
+    return {type: "PlutusV3" ,script: appliedScript};
 }
 
-// One-shot NFT minting policy — parameterized by seed UTxO reference
-export function getNftPolicy(utxoRef: {
-  txHash: string;
-  outputIndex: number;
-}): MintingPolicy {
-  const script = applyParamsToScript(findValidator("nft_policy.nft_policy"), [
-    new Constr(0, [fromHex(utxoRef.txHash) as any, BigInt(utxoRef.outputIndex)]),
-  ]);
-  return { type: "PlutusV3", script };
-}
-
-// Multisig state validator — parameterized by NFT policy + asset name
+//Apply NFT policy + asset name 
 export function getMultisigStateValidator(
-  nftPolicyId: string
+    nftPolicyId: string,
+    nftAssetName: string
 ): SpendingValidator {
-  const script = applyParamsToScript(
-    findValidator("multisig_state.multisig_state"),
-    [fromHex(nftPolicyId) as any, fromText(NFT_ASSET_NAME)]
-  );
-  return { type: "PlutusV3", script };
+    const appliedScript = applyParamsToScript(
+        blueprint.validators.find((v:any) => v.title === "multi_sign.multisig_state.spend")!.compiledCode,
+        // Pass policy as hex string, asset name as bytes
+        [nftPolicyId, fromText(nftAssetName)]
+    );
+    return { type:"PlutusV3" , script: appliedScript};
 }
 
-// Vault validator — parameterized by NFT policy + asset name
-export function getVaultValidator(nftPolicyId: string): SpendingValidator {
-  const script = applyParamsToScript(findValidator("vault.vault"), [
-    fromHex(nftPolicyId) as any,
-    fromText(NFT_ASSET_NAME),
-  ]);
-  return { type: "PlutusV3", script };
+// Apply NFT policy + asset name to the vault validator
+export function getVaultValidator(
+    nftPolicyId: string,
+    nftAssetName: string
+) : SpendingValidator {
+    const appliedScript = applyParamsToScript(
+        blueprint.validators.find((v: any) => v.title === "vault.vault.spend")!.compiledCode,
+        // Pass policy as hex string, asset name as bytes
+        [nftPolicyId, fromText(nftAssetName)]
+    );
+    return {type:"PlutusV3", script:appliedScript};
 }

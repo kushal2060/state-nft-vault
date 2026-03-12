@@ -10,7 +10,7 @@ export default function DepositForm({ onDeposit, loading }: Props) {
   const [amount, setAmount] = useState("");
 
   const lovelace = BigInt(Math.floor(parseFloat(amount || "0") * 1_000_000));
-  const valid = lovelace >= 2_000_000n;
+  const valid = lovelace >= 2_000_000;
 
   const handleDeposit = async () => {
     await onDeposit(lovelace);

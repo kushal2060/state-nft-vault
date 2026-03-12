@@ -136,14 +136,14 @@ export default function SetupPanel({ lucid, currentWalletAddress, onComplete }: 
 
       {txHash && (
         <div className="bg-green-900/20 border border-green-700/40 rounded-xl p-3 text-sm">
-          <p className="text-green-400 mb-1">✓ Setup tx submitted — awaiting confirmation…</p>
+          <p className="text-green-400 mb-1">Setup tx submitted — awaiting confirmation…</p>
           
-            href={`https://preprod.cardanoscan.io/transaction/${txHash}`}
+            <a href={`https://preprod.cardanoscan.io/transaction/${txHash}`}
             target="_blank"
             rel="noreferrer"
             className="font-mono text-xs text-green-500 underline break-all"
-          
-            {txHash}
+          >See in cardanoscan</a>
+            txHash:{txHash}
      
         </div>
       )}

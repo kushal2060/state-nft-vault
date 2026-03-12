@@ -119,24 +119,21 @@ export async function buildSpendTx (
     const {nftPolicyId,stateUtxo,vaultUtxos,datum,recipient,amount,network,signingPkhs}=params;
     // const stateValidator = getMultisigStateValidator(nftPolicyId,);
     const vaultValidator = getVaultValidator(nftPolicyId,NFT_ASSET_NAME_STRING);
-    // ── DEBUG: log everything the validator will check ──
-    console.log("=== buildSpendTx DEBUG ===");
     console.log("nftPolicyId:", nftPolicyId);
     console.log("NFT_ASSET_NAME_STRING:", NFT_ASSET_NAME_STRING);
     console.log("signingPkhs:", signingPkhs);
     console.log("datum.signers:", datum.signers);
     console.log("datum.threshold:", datum.threshold);
-    // Check 1: are all signingPkhs actually in datum.signers?
     const allAreSigners = signingPkhs.every(pkh => datum.signers.includes(pkh));
     console.log("all_are_signers check:", allAreSigners);
     signingPkhs.forEach(pkh => {
         console.log(`  pkh ${pkh} in signers? ${datum.signers.includes(pkh)}`);
     });
 
-    // Check 2: threshold met?
+    //  threshold met?
     console.log("threshold_met check:", signingPkhs.length, ">=", datum.threshold, "=", signingPkhs.length >= datum.threshold);
 
-    // Check 3: state UTxO has NFT?
+    // state UTxO has NFT?
     const { toUnit, fromText } = await import("@lucid-evolution/lucid");
     const nftUnit = toUnit(nftPolicyId, fromText(NFT_ASSET_NAME_STRING));
     console.log("nftUnit:", nftUnit);
@@ -145,7 +142,6 @@ export async function buildSpendTx (
     console.log("stateUtxo.datum:", stateUtxo.datum);
     console.log("stateUtxo.txHash:", stateUtxo.txHash);
     console.log("vaultUtxos count:", vaultUtxos.length);
-    console.log("=========================");
 
     
 

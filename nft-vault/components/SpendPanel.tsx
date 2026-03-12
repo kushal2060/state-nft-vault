@@ -108,7 +108,7 @@ export default function SpendPanel({
         ))}
       </div>
 
-      {/* ── Step 1: Build ── */}
+    
       {step === "form" && (
         <div className="space-y-3">
           <input
@@ -148,11 +148,11 @@ export default function SpendPanel({
         </div>
       )}
 
-      {/* ── Step 2: Sign (sequential) ── */}
+
       {step === "signing" && (
         <div className="space-y-4">
 
-          {/* Signatures progress dots */}
+     
           <div className="bg-gray-800 rounded-xl p-3 flex items-center justify-between">
             <span className="text-xs text-gray-400">Signatures collected</span>
             <div className="flex gap-1.5">
@@ -214,7 +214,7 @@ export default function SpendPanel({
         </div>
       )}
 
-      {/* ── Step 3: Submit ── */}
+     
       {step === "submit" && (
         <div className="space-y-3">
           <div className="bg-green-900/20 border border-green-700/40 rounded-xl p-3 flex items-center gap-2">

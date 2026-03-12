@@ -18,7 +18,7 @@ export interface ContractAddresses {
   nftPolicyId: string;
 }
 
-// Partial tx signing flow: tx CBOR is passed between signers
+
 export interface PartialTx {
   txCbor: string;
   recipient: string;

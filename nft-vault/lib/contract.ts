@@ -26,7 +26,7 @@ export function getMultisigStateValidator(
 ): SpendingValidator {
     const appliedScript = applyParamsToScript(
         blueprint.validators.find((v:any) => v.title === "multi_sign.multisig_state.spend")!.compiledCode,
-        // Pass policy as hex string, asset name as bytes
+        // Pass policy as hex string, asset name as bytes as lucid will take care of rthe cbor
         [nftPolicyId, fromText(nftAssetName)]
     );
     return { type:"PlutusV3" , script: appliedScript};
@@ -39,7 +39,6 @@ export function getVaultValidator(
 ) : SpendingValidator {
     const appliedScript = applyParamsToScript(
         blueprint.validators.find((v: any) => v.title === "vault.vault.spend")!.compiledCode,
-        // Pass policy as hex string, asset name as bytes
         [nftPolicyId, fromText(nftAssetName)]
     );
     return {type:"PlutusV3", script:appliedScript};

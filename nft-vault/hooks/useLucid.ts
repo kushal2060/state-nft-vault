@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 
-// Types only - no runtime import
 type LucidInstance = any;
 
 interface CardanoWallet {
@@ -48,10 +47,10 @@ export function useLucid() {
             setAvailableWallets(installed);
         };
 
-        // Check immediately
+     
         detectWallets();
 
-        // Also check after a short delay (some wallets inject late)
+      
         const timeout = setTimeout(detectWallets, 1000);
 
         return () => clearTimeout(timeout);
@@ -69,11 +68,7 @@ export function useLucid() {
         try {
             // Dynamic import - only loads in browser
             const { Lucid, Blockfrost, getAddressDetails } = await import("@lucid-evolution/lucid");
-            
-            // Enable the wallet (triggers wallet popup)
             const api = await cardano[walletName].enable();
-            
-            // Initialize Lucid with Blockfrost provider
             const lucidInstance = await Lucid(
                 new Blockfrost(
                     "https://cardano-preprod.blockfrost.io/api/v0",
@@ -82,10 +77,7 @@ export function useLucid() {
                 "Preprod"
             );
             
-            // Connect the wallet API to Lucid
             lucidInstance.selectWallet.fromAPI(api);
-
-            // Get wallet address and payment credential
             const address = await lucidInstance.wallet().address();
             const { paymentCredential } = getAddressDetails(address);
 

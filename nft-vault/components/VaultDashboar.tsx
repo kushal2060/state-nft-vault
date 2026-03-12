@@ -118,7 +118,7 @@ export default function VaultDashboard({ nftPolicyId, lucid, walletAddress, wall
     <div className="min-h-screen bg-gray-950 text-white p-6">
       <div className="max-w-5xl mx-auto space-y-6">
 
-        {/* ── Header ───────────────────────────────────── */}
+      
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white">Multisig Vault</h1>
@@ -136,7 +136,7 @@ export default function VaultDashboard({ nftPolicyId, lucid, walletAddress, wall
           </button>
         </div>
 
-        {/* ── State NFT indicator ───────────────────────── */}
+
         <div className="flex items-center gap-2 text-sm px-4 py-2 bg-gray-900 rounded-lg 
                         border border-gray-800 w-fit">
           <span className={`w-2 h-2 rounded-full ${
@@ -149,7 +149,6 @@ export default function VaultDashboard({ nftPolicyId, lucid, walletAddress, wall
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          {/* ── LEFT COLUMN ──────────────────────────────── */}
           <div className="space-y-6">
 
             {/* Vault Balance */}
@@ -172,7 +171,7 @@ export default function VaultDashboard({ nftPolicyId, lucid, walletAddress, wall
             </div>
           </div>
 
-          {/* ── RIGHT COLUMN ─────────────────────────────── */}
+        
           <div className="space-y-6">
 
             {/* Signers & Threshold */}
@@ -214,14 +213,12 @@ export default function VaultDashboard({ nftPolicyId, lucid, walletAddress, wall
           </div>
         </div>
 
-        {/* ── Error ────────────────────────────────────── */}
+   
         {error && (
           <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-4 text-red-400 text-sm">
             ⚠ {error}
           </div>
         )}
-
-        {/* ── Tx Hash ──────────────────────────────────── */}
         {txHash && (
           <div className="bg-green-900/20 border border-green-700/40 rounded-xl p-4">
             <p className="text-green-400 text-sm mb-1">✓ Transaction Submitted</p>

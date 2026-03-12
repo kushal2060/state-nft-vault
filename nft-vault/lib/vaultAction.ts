@@ -1,18 +1,16 @@
 import type {Lucid} from "@lucid-evolution/lucid"
 import {
-    Data,
     validatorToAddress,
     toUnit,
     fromText,
-    toHex,
 } from "@lucid-evolution/lucid"
 import {
   getMultisigStateValidator,
   getVaultValidator,
   NFT_ASSET_NAME_STRING,
 } from "./contract";
-import { decodeMultisigDatum, encodeVaultRedeemer } from "./datum";
-import { MultisigDatum, VaultState } from "./types";
+import { decodeMultisigDatum } from "./datum";
+import { VaultState } from "./types";
 
 //fetch current on-chain state
 export async function fetchVaultState(
